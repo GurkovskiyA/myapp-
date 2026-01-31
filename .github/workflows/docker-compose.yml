@@ -1,11 +1,11 @@
-name: Docker Compose CI
+name: Docker Compose Healthcheck CI
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  compose-test:
+  healthcheck-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,11 +15,20 @@ jobs:
       - name: Build and start services
         run: docker compose up -d
 
-      - name: Wait for containers
-        run: sleep 10
+      - name: Wait for services to stabilize
+        run: sleep 15
 
-      - name: Check running containers
+      - name: Show containers status
         run: docker ps
 
-      - name: Check logs from app
+      - name: Check app container health
+        run: |
+          STATUS=$(docker inspect --format='{{.State.Health.Status}}' myapp_container)
+          echo "Health status: $STATUS"
+          if [ "$STATUS" != "healthy" ]; then
+            echo "Container is not healthy"
+            exit 1
+          fi
+
+      - name: Show app logs
         run: docker compose logs app
